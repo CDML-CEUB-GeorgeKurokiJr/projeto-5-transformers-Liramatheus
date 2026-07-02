@@ -1,52 +1,58 @@
-# Clusterização de Textos Científicos com BERTimbau e Deep Learning
+# Clusterização de Textos Científicos com BERTimbau e Named Entity Recognition (NER)
 
-Projeto desenvolvido para a disciplina de **Deep Learning**, com foco na aplicação de **Transformers**, **Processamento de Linguagem Natural (NLP)** e **Aprendizado Não Supervisionado** para realizar a clusterização de projetos científicos brasileiros.
+Projeto desenvolvido para a disciplina de **Deep Learning**, explorando técnicas modernas de **Processamento de Linguagem Natural (NLP)**, **Transformers**, **Named Entity Recognition (NER)** e **Aprendizado Não Supervisionado** para identificar automaticamente grupos temáticos em projetos científicos brasileiros.
 
-O projeto utiliza uma abordagem híbrida combinando **BERTimbau**, **Named Entity Recognition (NER)**, **TF-IDF**, **Word2Vec** e técnicas de redução de dimensionalidade para gerar representações semânticas robustas dos textos.
+A solução utiliza o modelo **BERTimbau** para gerar embeddings semânticos, treina um modelo de **NER com spaCy** utilizando weak supervision e aplica **K-Means** para descobrir padrões presentes nos documentos.
 
 ---
 
-## Objetivos
+# Objetivo
 
-- Construir embeddings semânticos utilizando um modelo Transformer em português.
-- Filtrar automaticamente textos pertencentes a setores não tecnológicos.
-- Extrair entidades relevantes utilizando NER treinado especificamente para o domínio.
-- Combinar diferentes representações textuais em um único vetor híbrido.
-- Aplicar algoritmos de clusterização para identificar grupos de projetos semelhantes.
+O objetivo deste projeto é desenvolver um pipeline completo para análise semântica de textos científicos em português, combinando diferentes técnicas de Inteligência Artificial para:
+
+- Gerar embeddings utilizando Transformers;
+- Extrair entidades nomeadas automaticamente;
+- Treinar um modelo NER específico para o domínio;
+- Agrupar documentos semanticamente semelhantes;
+- Interpretar automaticamente os grupos encontrados.
 
 ---
 
 # Arquitetura da Solução
 
 ```
-Dataset
-    │
-    ▼
+Dataset DL-2024
+        │
+        ▼
 Pré-processamento
-    │
-    ▼
-Pré-filtro Temático
-    │
-    ▼
+        │
+        ▼
+Título + Descrição
+        │
+        ▼
+Extração de Entidades (spaCy)
+        │
+        ▼
+Treinamento NER
+        │
+        ▼
 Embeddings BERTimbau
-    │
-    ├────────► TF-IDF
-    │
-    ├────────► Word2Vec
-    │
-    └────────► NER Setorial
-               │
-               ▼
-Representação Híbrida
-               │
-               ▼
-Redução de Dimensionalidade
-               │
-               ▼
+        │
+        ▼
+Escolha do melhor K
+(Silhouette Score)
+        │
+        ▼
 K-Means
-               │
-               ▼
-Avaliação e Visualizações
+        │
+        ├────────► PCA
+        │
+        ├────────► t-SNE
+        │
+        └────────► TF-IDF
+                   │
+                   ▼
+Interpretação dos Clusters
 ```
 
 ---
@@ -56,117 +62,186 @@ Avaliação e Visualizações
 - Python
 - Pandas
 - NumPy
-- Scikit-Learn
-- Transformers (Hugging Face)
-- BERTimbau (`neuralmind/bert-base-portuguese-cased`)
 - PyTorch
+- Hugging Face Transformers
+- BERTimbau (`neuralmind/bert-base-portuguese-cased`)
 - spaCy
-- Gensim
+- Scikit-Learn
+- K-Means
+- PCA
+- t-SNE
+- TF-IDF
 - Matplotlib
-- Seaborn
+
+---
+
+# Dataset
+
+Foi utilizado o dataset **DL-2024**, contendo milhares de projetos científicos brasileiros.
+
+Cada documento foi construído a partir da concatenação de:
+
+- **Título Público**
+- **Descrição Pública**
+
+Essa estratégia aumenta o peso semântico do tema principal durante a geração dos embeddings.
 
 ---
 
 # Metodologia
 
-## 1. Carregamento do Dataset
+## 1. Pré-processamento
 
-O conjunto de dados é composto por projetos científicos brasileiros contendo título e descrição pública.
-
----
-
-## 2. Construção do Texto
-
-Para aumentar o peso semântico do tema principal, o título do projeto é repetido antes da descrição.
-
-Exemplo:
-
-```
-Título + Título + Descrição
-```
+Os textos foram normalizados e combinados em um único documento textual contendo título e descrição.
 
 ---
 
-## 3. Pré-filtro Temático
+## 2. Extração de Entidades
 
-Antes da geração dos embeddings é aplicado um filtro baseado em aproximadamente **63 palavras-chave**, organizadas em diferentes setores corporativos.
+Inicialmente foi utilizado o modelo **pt_core_news_lg** do spaCy para identificar automaticamente entidades nomeadas.
 
-Essa etapa reduz o ruído do conjunto de dados e melhora a qualidade da clusterização.
-
----
-
-## 4. Extração de Entidades (NER)
-
-Foi treinado um modelo **spaCy** específico para reconhecer entidades relacionadas aos setores analisados.
-
-As entidades identificadas são incorporadas à representação final do documento.
+Como o dataset não possui anotações NER, foi utilizada uma estratégia de **Weak Supervision**, na qual as entidades detectadas servem como exemplos para treinamento de um modelo específico para o domínio científico.
 
 ---
 
-## 5. Geração dos Embeddings
+## 3. Geração dos Embeddings
 
-O projeto utiliza o modelo:
+Cada documento foi convertido em um vetor semântico utilizando o modelo:
 
 **BERTimbau Base Portuguese Cased**
 
-para transformar cada documento em um vetor semântico utilizando Mean Pooling.
+Os embeddings foram obtidos através de **Mean Pooling** sobre a última camada oculta do Transformer.
 
 ---
 
-## 6. Representação Híbrida
+## 4. Clusterização
 
-Cada documento é representado pela concatenação de quatro blocos de informação:
+Os embeddings foram agrupados utilizando o algoritmo **K-Means**.
 
-- Embeddings BERTimbau
-- Vetores TF-IDF
-- Representação Word2Vec
-- Entidades extraídas pelo NER
-
-Essa estratégia aumenta a capacidade de representação semântica dos textos.
+A escolha do número ideal de clusters foi realizada automaticamente através do **Silhouette Score**, sendo identificado que **2 clusters** apresentavam o melhor desempenho para o conjunto de dados.
 
 ---
 
-## 7. Redução de Dimensionalidade
+## 5. Visualização
 
-Após a concatenação dos vetores é realizada redução de dimensionalidade para facilitar o processo de clusterização e visualização.
+Para facilitar a interpretação dos agrupamentos foram utilizadas duas técnicas de redução de dimensionalidade:
 
----
-
-## 8. Clusterização
-
-Foi utilizado o algoritmo:
-
-- K-Means
-
-para identificar automaticamente grupos de projetos com características semelhantes.
+- PCA (Principal Component Analysis)
+- t-SNE (t-distributed Stochastic Neighbor Embedding)
 
 ---
 
-## 9. Avaliação
+## 6. Interpretação
 
-A qualidade dos clusters é analisada utilizando métricas como:
+Após a clusterização, foi aplicado **TF-IDF** para identificar os termos mais representativos de cada grupo.
 
-- Silhouette Score
-- Visualizações em PCA
-- Visualizações em t-SNE
+Isso permitiu interpretar automaticamente os temas predominantes encontrados pelo modelo.
 
 ---
 
-# Principais Técnicas de Deep Learning
+# Resultados
 
+O pipeline foi capaz de identificar automaticamente **dois grandes grupos temáticos** de projetos científicos.
+
+## Cluster 1 — Sistemas Inteligentes e IoT
+
+Projetos relacionados a:
+
+- Desenvolvimento de software
+- Plataformas inteligentes
+- Sistemas embarcados
+- Internet das Coisas (IoT)
+- Monitoramento
+- Gerenciamento
+- Comunicação entre dispositivos
+
+**Principais termos identificados:**
+
+```
+software
+plataforma
+monitoramento
+controle
+embarcado
+dispositivos
+IoT
+protótipo
+inteligente
+gerenciamento
+inteligência
+hardware
+comunicação
+módulo
+```
+
+---
+
+## Cluster 2 — Engenharia, Materiais e Energia
+
+Projetos relacionados a:
+
+- Engenharia
+- Produção industrial
+- Materiais avançados
+- Energia
+- Processos tecnológicos
+- Tratamento
+- Otimização
+- Aplicações industriais
+
+**Principais termos identificados:**
+
+```
+produção
+aplicação
+energia
+materiais
+controle
+monitoramento
+otimização
+tratamento
+solução
+base
+visando
+através
+```
+
+---
+
+# Avaliação
+
+O desempenho da clusterização foi avaliado utilizando o **Silhouette Score**, permitindo selecionar automaticamente o número de clusters mais adequado.
+
+Além disso, foram geradas duas formas de visualização:
+
+### PCA
+
+Mostrou uma separação global consistente entre os dois grupos de documentos.
+
+### t-SNE
+
+Revelou subgrupos internos e regiões de transição entre alguns documentos, indicando que os embeddings do BERTimbau capturam nuances semânticas além da divisão principal dos clusters.
+
+Esse comportamento é esperado em bases textuais, onde diferentes áreas do conhecimento compartilham conceitos e vocabulário semelhantes.
+
+---
+
+# Competências Demonstradas
+
+- Deep Learning
 - Transformers
 - BERTimbau
-- Word Embeddings
-- Mean Pooling
 - Processamento de Linguagem Natural (NLP)
 - Named Entity Recognition (NER)
-- Representação Híbrida de Documentos
-
----
-
-# Contexto Acadêmico
-
-Projeto desenvolvido como atividade da disciplina de **Deep Learning**, explorando técnicas modernas de Inteligência Artificial e Processamento de Linguagem Natural para análise semântica de textos científicos.
+- Weak Supervision
+- Document Embeddings
+- Clusterização Não Supervisionada
+- K-Means
+- PCA
+- t-SNE
+- TF-IDF
+- Ciência de Dados
+- Machine Learning
 
 ---
 
